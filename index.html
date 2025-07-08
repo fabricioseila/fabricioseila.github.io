@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calendário de Plantão 2025</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .filtros {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .filtros button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      background-color: #adb5bd;
+      color: white;
+    }
+    .filtros button:hover {
+      opacity: 0.9;
+    }
+    .mes {
+      margin-bottom: 40px;
+    }
+    .mes h3 {
+      background: #343a40;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .calendario {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      text-align: center;
+    }
+    .dia, .nome-dia {
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .nome-dia {
+      font-weight: bold;
+      background: #dee2e6;
+    }
+    .dia {
+      background: white;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      transition: all 0.2s;
+    }
+    .plantao {
+      background: #f94144;
+      color: white;
+    }
+    .folga {
+      background: #90be6d;
+      color: white;
+    }
+    .oculto {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <h2>Calendário de Plantão 2025</h2>
+	<div class="filtros">
+  <button onclick="filtrar('todos')">Mostrar Todos</button>
+  <button onclick="filtrar('plantao')">Somente Plantões</button>
+  <button onclick="filtrar('folga')">Somente Folgas</button>
+  <button onclick="limparMarcacoes()" style="background-color:#ef233c;">Limpar Todos</button>
+  <input type="file" id="importarArquivo" accept=".json" style="display:none" onchange="importarMarcacoes(event)" />
+  <button onclick="document.getElementById('importarArquivo').click()" style="background-color:#118ab2;">Importar Backup</button>
+</div>
+  <div id="calendario-container"></div>
+
+  <script>
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const meses = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    const container = document.getElementById('calendario-container');
+    const ano = 2025;
+    let estado = JSON.parse(localStorage.getItem('diasMarcados2025')) || {};
+
+    function salvarEstado() {
+      localStorage.setItem('diasMarcados2025', JSON.stringify(estado));
+    }
+
+    function gerarCalendario() {
+      for (let mes = 0; mes < 12; mes++) {
+        const divMes = document.createElement('div');
+        divMes.className = 'mes';
+
+        const tituloMes = document.createElement('h3');
+        tituloMes.textContent = `${meses[mes]} ${ano}`;
+        divMes.appendChild(tituloMes);
+
+        const grid = document.createElement('div');
+        grid.className = 'calendario';
+
+        // Nomes dos dias
+        for (let d = 0; d < 7; d++) {
+          const nomeDia = document.createElement('div');
+          nomeDia.className = 'nome-dia';
+          nomeDia.textContent = diasSemana[d];
+          grid.appendChild(nomeDia);
+        }
+
+        const primeiroDia = new Date(ano, mes, 1).getDay();
+        const totalDias = new Date(ano, mes + 1, 0).getDate();
+
+        // Espaços em branco
+        for (let i = 0; i < primeiroDia; i++) {
+          const vazio = document.createElement('div');
+          grid.appendChild(vazio);
+        }
+
+        for (let dia = 1; dia <= totalDias; dia++) {
+          const data = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+          const botao = document.createElement('div');
+          botao.className = 'dia';
+          botao.textContent = dia;
+          botao.dataset.data = data;
+
+          // Estado salvo
+          if (estado[data] === 'plantao') {
+            botao.classList.add('plantao');
+          } else if (estado[data] === 'folga') {
+            botao.classList.add('folga');
+          }
+
+          botao.onclick = () => {
+            if (!estado[data]) {
+              estado[data] = 'plantao';
+              botao.classList.add('plantao');
+            } else if (estado[data] === 'plantao') {
+              estado[data] = 'folga';
+              botao.classList.remove('plantao');
+              botao.classList.add('folga');
+            } else {
+              delete estado[data];
+              botao.classList.remove('plantao', 'folga');
+            }
+            salvarEstado();
+          };
+
+          grid.appendChild(botao);
+        }
+
+        divMes.appendChild(grid);
+        container.appendChild(divMes);
+      }
+    }
+
+    function filtrar(tipo) {
+      const dias = document.querySelectorAll('.dia');
+      dias.forEach(dia => {
+        const data = dia.dataset.data;
+        const marcacao = estado[data];
+
+        if (tipo === 'todos') {
+          dia.classList.remove('oculto');
+        } else if (tipo === 'plantao' && marcacao !== 'plantao') {
+          dia.classList.add('oculto');
+        } else if (tipo === 'folga' && marcacao !== 'folga') {
+          dia.classList.add('oculto');
+        } else {
+          dia.classList.remove('oculto');
+        }
+      });
+    }
+	function limparMarcacoes() {
+  if (!Object.keys(estado).length) {
+    alert("Nenhum dia marcado para limpar.");
+    return;
+  }
+
+  if (confirm("Deseja salvar um backup antes de limpar todos os dias marcados?")) {
+    const dados = JSON.stringify(estado, null, 2);
+    const blob = new Blob([dados], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "dias-marcados-2025.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  estado = {};
+  localStorage.removeItem('diasMarcados2025');
+
+  // Atualiza visualmente
+  document.querySelectorAll('.dia').forEach(dia => {
+    dia.classList.remove('plantao', 'folga', 'oculto');
+  });
+
+  alert("Todos os dias foram limpos.");
+}
+function importarMarcacoes(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const dados = JSON.parse(e.target.result);
+      if (typeof dados !== 'object' || Array.isArray(dados)) {
+        alert("Arquivo inválido.");
+        return;
+      }
+
+      estado = dados;
+      localStorage.setItem('diasMarcados2025', JSON.stringify(estado));
+
+      // Atualiza visualmente
+      document.querySelectorAll('.dia').forEach(dia => {
+        const data = dia.dataset.data;
+        dia.classList.remove('plantao', 'folga', 'oculto');
+
+        if (estado[data] === 'plantao') {
+          dia.classList.add('plantao');
+        } else if (estado[data] === 'folga') {
+          dia.classList.add('folga');
+        }
+      });
+
+      alert("Backup importado com sucesso!");
+    } catch (e) {
+      alert("Erro ao importar arquivo. Verifique se é um JSON válido.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+	
+
+    gerarCalendario();
+  </script>
+</body>
+</html>
